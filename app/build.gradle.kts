@@ -61,7 +61,7 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "csqtt.quic.amurcanov"
+        applicationId = "com.csqtt.client.custom"
         minSdk = 26
         targetSdk = 37
         versionCode = 230
