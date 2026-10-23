@@ -729,6 +729,7 @@ internal fun SettingsTabContent(
                 }
 
 
+                if (!participantMode) {
                 CompactDropdownSetting(
                     title = "Режим кредов",
                     selectedKey = effectiveVkAuthMode,
@@ -952,6 +953,7 @@ internal fun SettingsTabContent(
                 }
 
             }
+         }
 
             if (!participantMode) {
                 OutlinedButton(
