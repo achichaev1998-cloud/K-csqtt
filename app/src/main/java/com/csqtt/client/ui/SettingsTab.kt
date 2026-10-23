@@ -1269,5 +1269,4 @@ if (!participantMode) {
         onSelected = onSelected,
         leadingContent = null,
     )
-}
-}
+    }
