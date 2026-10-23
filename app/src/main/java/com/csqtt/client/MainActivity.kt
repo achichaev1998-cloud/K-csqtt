@@ -1,4 +1,4 @@
-package com.csqtt.client
+Package com.csqtt.client
 
 import android.annotation.SuppressLint
 import android.Manifest
@@ -33,7 +33,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.VpnKey
@@ -139,37 +138,37 @@ class MainActivity : ComponentActivity() {
             val uiStateHolder = rememberSaveableStateHolder()
             if (renderUi) {
                 uiStateHolder.SaveableStateProvider("main_ui") {
-                    val settingsStore = remember { appSettingsStore }
-                    val themeMode by settingsStore.themeMode.collectAsStateWithLifecycle(initialValue = CsqttConstants.Theme.MODE_SYSTEM)
-                    val activeFingerprint by settingsStore.selectedFingerprint.collectAsStateWithLifecycle(initialValue = CsqttConstants.Tunnel.DEFAULT_FINGERPRINT)
-                    val scope = rememberCoroutineScope()
+            val settingsStore = remember { appSettingsStore }
+            val themeMode by settingsStore.themeMode.collectAsStateWithLifecycle(initialValue = CsqttConstants.Theme.MODE_SYSTEM)
+            val activeFingerprint by settingsStore.selectedFingerprint.collectAsStateWithLifecycle(initialValue = CsqttConstants.Tunnel.DEFAULT_FINGERPRINT)
+            val scope = rememberCoroutineScope()
 
-                    val baseDensity = LocalDensity.current
-                    val fixedDensity = remember(baseDensity.density) { Density(baseDensity.density, 1f) }
+            val baseDensity = LocalDensity.current
+            val fixedDensity = remember(baseDensity.density) { Density(baseDensity.density, 1f) }
 
-                    CompositionLocalProvider(LocalDensity provides fixedDensity) {
-                        CSQTTTheme(themeMode = themeMode) {
-                            Surface(
-                                modifier = Modifier.fillMaxSize(),
-                                color = MaterialTheme.colorScheme.background,
-                            ) {
-                                MainScreen(
-                                    settingsStore = settingsStore,
-                                    themeMode = themeMode,
-                                    onThemeChange = { mode ->
-                                        scope.launch {
-                                            settingsStore.saveThemeMode(mode)
-                                        }
-                                    },
-                                    activeFingerprint = activeFingerprint,
-                                    onFingerprintChange = { fp ->
-                                        scope.launch { settingsStore.saveFingerprint(fp) }
-                                    },
-                                    onVkAuthRequested = { showVkAuthDialog = true },
-                                )
+            CompositionLocalProvider(LocalDensity provides fixedDensity) {
+            CSQTTTheme(themeMode = themeMode) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background,
+                ) {
+                    MainScreen(
+                        settingsStore = settingsStore,
+                        themeMode = themeMode,
+                        onThemeChange = { mode ->
+                            scope.launch {
+                                settingsStore.saveThemeMode(mode)
                             }
-                        }
-                    }
+                        },
+                        activeFingerprint = activeFingerprint,
+                        onFingerprintChange = { fp ->
+                            scope.launch { settingsStore.saveFingerprint(fp) }
+                        },
+                        onVkAuthRequested = { showVkAuthDialog = true },
+                    )
+                }
+            }
+            }
                 }
             }
             if (showVkAuthDialog) {
@@ -331,7 +330,6 @@ fun MainScreen(
     val infoActionsExpanded by settingsStore.infoActionsExpanded.collectAsStateWithLifecycle(initialValue = false)
     val infoProjectExpanded by settingsStore.infoProjectExpanded.collectAsStateWithLifecycle(initialValue = false)
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
-    var menuExpanded by remember { mutableStateOf(false) }
     var tunnelValidationRequest by rememberSaveable { mutableIntStateOf(0) }
     val dragTargetIndex = remember { mutableIntStateOf(-1) }
     val dragProgress = remember { mutableFloatStateOf(0f) }
@@ -434,27 +432,38 @@ fun MainScreen(
 
         CompositionLocalProvider(
             LocalCsqttHeaderActions provides {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    FloatingToolbar(
-                        settingsStore = settingsStore,
-                        csqttLinkMode = csqttLinkMode,
-                        activeProfile = activeProfile,
-                        onActiveProfileChange = { profile ->
-                            scope.launch { settingsStore.saveActiveProfile(profile) }
-                        },
-                        currentTheme = themeMode,
-                        onThemeChange = onThemeChange,
-                        activeFingerprint = activeFingerprint,
-                        onFingerprintChange = onFingerprintChange,
-                        autoPauseOnWifi = autoPauseOnWifi,
-                        onAutoPauseOnWifiChange = { enabled ->
-                            scope.launch { settingsStore.saveAutoPauseOnWifi(enabled) }
-                        },
-                    )
-
-                    Box {
-                        IconButton(onClick = { menuExpanded = true }) {
-                            Icon(
-                                imageVector = Icons.Default.MoreVert,
-                                contentDescription = "Меню",
-                                tint = MaterialTheme.colorScheme.
+                FloatingToolbar(
+                    settingsStore = settingsStore,
+                    csqttLinkMode = csqttLinkMode,
+                    activeProfile = activeProfile,
+                    onActiveProfileChange = { profile ->
+                        scope.launch { settingsStore.saveActiveProfile(profile) }
+                    },
+                    currentTheme = themeMode,
+                    onThemeChange = onThemeChange,
+                    activeFingerprint = activeFingerprint,
+                    onFingerprintChange = onFingerprintChange,
+                    autoPauseOnWifi = autoPauseOnWifi,
+                    onAutoPauseOnWifiChange = { enabled ->
+                        scope.launch { settingsStore.saveAutoPauseOnWifi(enabled) }
+                    },
+                )
+            },
+        ) {
+            Scaffold(
+                contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
+                containerColor = Color.Transparent,
+            ) { padding ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .consumeWindowInsets(padding)
+                        .pointerInput(selectedTab, csqttLinkMode, participantShowLogs) {
+                        var totalDrag = 0f
+                        detectHorizontalDragGestures(
+                            onDragStart = {
+                                totalDrag = 0f
+                                dragTargetIndex.intValue = -1
+                                dragProgress.floatValue = 0f
+                            },
