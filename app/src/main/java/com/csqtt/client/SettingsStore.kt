@@ -283,6 +283,16 @@ class SettingsStore(context: Context) {
                 migrateConnectionPasswordsToLocalStorage()
                 migrateSecretsToKeystore()
                 migrateLegacyWhitelistMode()
+                
+                // Принудительно включаем режим Участника по умолчанию для всех профилей один раз
+                dataStore.edit { prefs ->
+                    for (p in CsqttConstants.Profiles.MIN_INDEX..CsqttConstants.Profiles.MAX_INDEX) {
+                        val key = getProfileKey(CSQTT_LINK_MODE, p)
+                        if (prefs[key] != true) {
+                            prefs[key] = true
+                        }
+                    }
+                }
             }
         }
         if (uiCacheStarted.compareAndSet(false, true)) {
