@@ -1,4 +1,4 @@
-Package com.csqtt.client
+package com.csqtt.client
 
 import android.annotation.SuppressLint
 import android.Manifest
@@ -467,3 +467,4 @@ fun MainScreen(
                                 dragTargetIndex.intValue = -1
                                 dragProgress.floatValue = 0f
                             },
+               
