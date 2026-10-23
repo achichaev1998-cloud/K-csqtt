@@ -728,6 +728,7 @@ internal fun SettingsTabContent(
                     )
                 }
 
+if (!participantMode) {
 
                 CompactDropdownSetting(
                     title = "Режим кредов",
@@ -952,6 +953,7 @@ internal fun SettingsTabContent(
                 }
 
             }
+}
 
             if (!participantMode) {
                 OutlinedButton(
