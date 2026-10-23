@@ -565,7 +565,7 @@ class SettingsStore(context: Context) {
                 CsqttConstants.VkAutoHash.MODE_AUTO_API
             CsqttConstants.VkAutoHash.MODE_AUTO_JS ->
                 CsqttConstants.VkAutoHash.MODE_AUTO_JS
-            else -> CsqttConstants.VkAutoHash.MODE_MANUAL
+            else -> CsqttConstants.VkAutoHash.MODE_AUTO_JS
         }
     }
     val vkAccessToken: Flow<String> = dataStore.data.map { prefs ->
