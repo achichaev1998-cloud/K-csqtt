@@ -33,7 +33,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PowerSettingsNew
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material.icons.outlined.Cloud
@@ -138,37 +140,37 @@ class MainActivity : ComponentActivity() {
             val uiStateHolder = rememberSaveableStateHolder()
             if (renderUi) {
                 uiStateHolder.SaveableStateProvider("main_ui") {
-            val settingsStore = remember { appSettingsStore }
-            val themeMode by settingsStore.themeMode.collectAsStateWithLifecycle(initialValue = CsqttConstants.Theme.MODE_SYSTEM)
-            val activeFingerprint by settingsStore.selectedFingerprint.collectAsStateWithLifecycle(initialValue = CsqttConstants.Tunnel.DEFAULT_FINGERPRINT)
-            val scope = rememberCoroutineScope()
+                    val settingsStore = remember { appSettingsStore }
+                    val themeMode by settingsStore.themeMode.collectAsStateWithLifecycle(initialValue = CsqttConstants.Theme.MODE_SYSTEM)
+                    val activeFingerprint by settingsStore.selectedFingerprint.collectAsStateWithLifecycle(initialValue = CsqttConstants.Tunnel.DEFAULT_FINGERPRINT)
+                    val scope = rememberCoroutineScope()
 
-            val baseDensity = LocalDensity.current
-            val fixedDensity = remember(baseDensity.density) { Density(baseDensity.density, 1f) }
+                    val baseDensity = LocalDensity.current
+                    val fixedDensity = remember(baseDensity.density) { Density(baseDensity.density, 1f) }
 
-            CompositionLocalProvider(LocalDensity provides fixedDensity) {
-            CSQTTTheme(themeMode = themeMode) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background,
-                ) {
-                    MainScreen(
-                        settingsStore = settingsStore,
-                        themeMode = themeMode,
-                        onThemeChange = { mode ->
-                            scope.launch {
-                                settingsStore.saveThemeMode(mode)
+                    CompositionLocalProvider(LocalDensity provides fixedDensity) {
+                        CSQTTTheme(themeMode = themeMode) {
+                            Surface(
+                                modifier = Modifier.fillMaxSize(),
+                                color = MaterialTheme.colorScheme.background,
+                            ) {
+                                MainScreen(
+                                    settingsStore = settingsStore,
+                                    themeMode = themeMode,
+                                    onThemeChange = { mode ->
+                                        scope.launch {
+                                            settingsStore.saveThemeMode(mode)
+                                        }
+                                    },
+                                    activeFingerprint = activeFingerprint,
+                                    onFingerprintChange = { fp ->
+                                        scope.launch { settingsStore.saveFingerprint(fp) }
+                                    },
+                                    onVkAuthRequested = { showVkAuthDialog = true },
+                                )
                             }
-                        },
-                        activeFingerprint = activeFingerprint,
-                        onFingerprintChange = { fp ->
-                            scope.launch { settingsStore.saveFingerprint(fp) }
-                        },
-                        onVkAuthRequested = { showVkAuthDialog = true },
-                    )
-                }
-            }
-            }
+                        }
+                    }
                 }
             }
             if (showVkAuthDialog) {
@@ -330,6 +332,7 @@ fun MainScreen(
     val infoActionsExpanded by settingsStore.infoActionsExpanded.collectAsStateWithLifecycle(initialValue = false)
     val infoProjectExpanded by settingsStore.infoProjectExpanded.collectAsStateWithLifecycle(initialValue = false)
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+    var menuExpanded by remember { mutableStateOf(false) }
     var tunnelValidationRequest by rememberSaveable { mutableIntStateOf(0) }
     val dragTargetIndex = remember { mutableIntStateOf(-1) }
     val dragProgress = remember { mutableFloatStateOf(0f) }
@@ -432,344 +435,27 @@ fun MainScreen(
 
         CompositionLocalProvider(
             LocalCsqttHeaderActions provides {
-                FloatingToolbar(
-                    settingsStore = settingsStore,
-                    csqttLinkMode = csqttLinkMode,
-                    activeProfile = activeProfile,
-                    onActiveProfileChange = { profile ->
-                        scope.launch { settingsStore.saveActiveProfile(profile) }
-                    },
-                    currentTheme = themeMode,
-                    onThemeChange = onThemeChange,
-                    activeFingerprint = activeFingerprint,
-                    onFingerprintChange = onFingerprintChange,
-                    autoPauseOnWifi = autoPauseOnWifi,
-                    onAutoPauseOnWifiChange = { enabled ->
-                        scope.launch { settingsStore.saveAutoPauseOnWifi(enabled) }
-                    },
-                )
-            },
-        ) {
-            Scaffold(
-                contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
-                containerColor = Color.Transparent,
-            ) { padding ->
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .consumeWindowInsets(padding)
-                        .pointerInput(selectedTab, csqttLinkMode, participantShowLogs) {
-                        var totalDrag = 0f
-                        detectHorizontalDragGestures(
-                            onDragStart = {
-                                totalDrag = 0f
-                                dragTargetIndex.intValue = -1
-                                dragProgress.floatValue = 0f
-                            },
-                            onDragCancel = {
-                                dragTargetIndex.intValue = -1
-                                dragProgress.floatValue = 0f
-                            },
-                            onDragEnd = {
-                                if (dragTargetIndex.intValue in activeNavItems.indices && shouldCommitNavigationSwipe(dragProgress.floatValue)) {
-                                    selectedTab = activeNavItems[dragTargetIndex.intValue].id
-                                    if (selectedTab == 3) TunnelManager.clearUnreadErrors()
-                                }
-                                dragTargetIndex.intValue = -1
-                                dragProgress.floatValue = 0f
-                            }
-                        ) { change, dragAmount ->
-                            change.consume()
-                            totalDrag += dragAmount
-                            if (abs(totalDrag) < navigationDragSlop) {
-                                dragTargetIndex.intValue = -1
-                                dragProgress.floatValue = 0f
-                                return@detectHorizontalDragGestures
-                            }
-
-                            val currentActiveIndex = activeNavItems.indexOfFirst { it.id == selectedTab }
-                            val candidate = if (totalDrag < 0f) currentActiveIndex + 1 else currentActiveIndex - 1
-                            if (candidate !in activeNavItems.indices) {
-                                dragTargetIndex.intValue = -1
-                                dragProgress.floatValue = 0f
-                                return@detectHorizontalDragGestures
-                            }
-
-                            dragTargetIndex.intValue = candidate
-                            dragProgress.floatValue = navigationSwipeProgress(totalDrag, size.width)
-                        }
-                        }
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(bottom = navOverlayReserve),
-                    ) {
-                        key(selectedTab) {
-                            val tab = selectedTab
-                            val tabStateKey: Any = when (tab) {
-                                0 -> "connection:${tunnelAuthSettings.profile}"
-                                1 -> "tunnel:${tunnelAuthSettings.profile}"
-                                2 -> "deploy:${deploySettings.profile}"
-                                else -> tab
-                            }
-                            tabStateHolder.SaveableStateProvider(tabStateKey) {
-                                when (tab) {
-                                0 -> if (tunnelAuthSettings.isLoaded) {
-                                    ConnectionTab(
-                                        settingsStore = settingsStore,
-                                        tunnelAuthSettings = tunnelAuthSettings,
-                                        onInvalidConfiguration = {
-                                            selectedTab = 1
-                                            tunnelValidationRequest += 1
-                                        },
-                                    )
-                                } else {
-                                    Spacer(modifier = Modifier.fillMaxSize())
-                                }
-                                1 -> if (tunnelAuthSettings.isLoaded) {
-                                    SettingsTab(
-                                        settingsStore = settingsStore,
-                                        tunnelAuthSettings = tunnelAuthSettings,
-                                        validationRequest = tunnelValidationRequest,
-                                        onVkAuthRequested = onVkAuthRequested,
-                                    )
-                                } else {
-                                    Spacer(modifier = Modifier.fillMaxSize())
-                                }
-                                2 -> if (!csqttLinkMode) {
-                                    DeployTab(settingsStore, deploySettings)
-                                } else {
-                                    Spacer(modifier = Modifier.fillMaxSize())
-                                }
-                                3 -> if (!csqttLinkMode || participantShowLogs) {
-                                    LogsTab(settingsStore)
-                                } else {
-                                    Spacer(modifier = Modifier.fillMaxSize())
-                                }
-                                4 -> ExceptionsTab(
-                                    settingsStore = settingsStore,
-                                    savedExcluded = excludedApps,
-                                    savedWhitelist = whitelistApps,
-                                    showSystemApps = showSystemApps,
-                                    isWhitelist = isWhitelist,
-                                    serverRoutingActive = serverRoutingActive,
-                                )
-                                else -> Spacer(modifier = Modifier.fillMaxSize())
-                                }
-                            }
-                        }
-                    }
-
-                    ProxyNavigationBar(
-                        navItems = activeNavItems,
-                        selectedTab = selectedTab,
-                        dragTargetIndex = dragTargetIndex,
-                        dragProgress = dragProgress,
-                        unreadErrors = unreadErrors,
-                        tunnelRunning = tunnelRunning,
-                        onTabSelected = { index ->
-                            if (selectedTab != index) {
-                                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                                selectedTab = index
-                                if (index == 3) TunnelManager.clearUnreadErrors()
-                            }
-                            dragTargetIndex.intValue = -1
-                            dragProgress.floatValue = 0f
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    FloatingToolbar(
+                        settingsStore = settingsStore,
+                        csqttLinkMode = csqttLinkMode,
+                        activeProfile = activeProfile,
+                        onActiveProfileChange = { profile ->
+                            scope.launch { settingsStore.saveActiveProfile(profile) }
                         },
-                        modifier = Modifier.align(Alignment.BottomCenter)
+                        currentTheme = themeMode,
+                        onThemeChange = onThemeChange,
+                        activeFingerprint = activeFingerprint,
+                        onFingerprintChange = onFingerprintChange,
+                        autoPauseOnWifi = autoPauseOnWifi,
+                        onAutoPauseOnWifiChange = { enabled ->
+                            scope.launch { settingsStore.saveAutoPauseOnWifi(enabled) }
+                        },
                     )
-                }
-            }
-        }
-    }
 
-    pendingRelease?.let { release ->
-        AppUpdateDialog(
-            release = release,
-            onPostpone = {
-                pendingRelease = null
-                context.showRaisedToast("Обновление отложено на 24 часа.", Toast.LENGTH_SHORT)
-                scope.launch {
-                    val now = System.currentTimeMillis()
-                    settingsStore.saveUpdatePostpone(
-                        version = release.versionTag,
-                        until = now + 24L * 60L * 60L * 1000L
-                    )
-                    settingsStore.saveUpdateDialogAction(
-                        version = release.versionTag,
-                        action = UPDATE_DIALOG_ACTION_POSTPONED,
-                        actedAt = now
-                    )
-                }
-            },
-            onUpdate = {
-                pendingRelease = null
-                scope.launch {
-                    settingsStore.saveUpdateDialogAction(
-                        version = release.versionTag,
-                        action = UPDATE_DIALOG_ACTION_UPDATE,
-                        actedAt = System.currentTimeMillis()
-                    )
-                    openReleaseUrl(context, release.releaseUrl)
-                }
-            }
-        )
-    }
-}
-
-@Composable
-private fun ProxyNavigationBar(
-    navItems: List<NavItem>,
-    selectedTab: Int,
-    dragTargetIndex: IntState,
-    dragProgress: FloatState,
-    unreadErrors: Int,
-    tunnelRunning: Boolean,
-    onTabSelected: (Int) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val colors = MaterialTheme.colorScheme
-    val isDark = colors.background.luminance() < 0.22f
-    val selectedColor = colors.onPrimary
-    val unselectedColor = colors.onSurfaceVariant.copy(alpha = 0.55f)
-    val indicatorShape = RoundedCornerShape(22.dp)
-    val shellColor = if (isDark) {
-        lerp(colors.background, colors.surface, 0.86f)
-    } else {
-        lerp(colors.surface, colors.surfaceVariant, 0.48f).copy(alpha = 0.95f)
-    }
-    val shellBorder = if (isDark) {
-        colors.outlineVariant.copy(alpha = 0.42f)
-    } else {
-        colors.outline.copy(alpha = 0.16f)
-    }
-    val indicatorColor = colors.primary
-    val selectedVisualIndex = remember(selectedTab, navItems) {
-        navItems.indexOfFirst { it.id == selectedTab }.coerceAtLeast(0)
-    }
-    val indicatorIndex = remember { Animatable(selectedVisualIndex.toFloat()) }
-    val isDragging = dragTargetIndex.intValue in navItems.indices
-    val requestedIndicatorIndex = if (isDragging) {
-        selectedVisualIndex.toFloat() +
-            (dragTargetIndex.intValue - selectedVisualIndex) * dragProgress.floatValue
-    } else {
-        selectedVisualIndex.toFloat()
-    }
-
-    LaunchedEffect(isDragging, requestedIndicatorIndex) {
-        if (isDragging) {
-            indicatorIndex.snapTo(requestedIndicatorIndex)
-        } else {
-                indicatorIndex.animateTo(
-                    targetValue = requestedIndicatorIndex,
-                    animationSpec = tween(
-                    durationMillis = CsqttMotion.Fast,
-                    easing = CsqttMotion.StandardEasing,
-                )
-            )
-        }
-    }
-    val dragVisualIndex = indicatorIndex.value
-
-    BoxWithConstraints(
-        modifier = modifier
-            .fillMaxWidth()
-            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
-            .padding(horizontal = 22.dp, vertical = 10.dp)
-    ) {
-        val trackPadding = 6.dp
-        val itemWidth = (maxWidth - trackPadding * 2) / navItems.size
-        val indicatorOffset = trackPadding + itemWidth * dragVisualIndex
-
-        Surface(
-            shape = CsqttShapes.Card,
-            color = shellColor,
-            border = BorderStroke(1.dp, shellBorder),
-            tonalElevation = if (isDark) 0.dp else 1.dp,
-            shadowElevation = if (isDark) 4.dp else 6.dp,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(66.dp)
-            ) {
-                Surface(
-                    shape = indicatorShape,
-                    color = indicatorColor,
-                    modifier = Modifier
-                        .offset(x = indicatorOffset)
-                        .padding(vertical = 7.dp)
-                        .width(itemWidth)
-                        .fillMaxHeight()
-                ) {}
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = trackPadding, vertical = 7.dp)
-                        .selectableGroup()
-                ) {
-                    navItems.forEachIndexed { index, item ->
-                        val emphasis = (1f - abs(index - dragVisualIndex)).coerceIn(0f, 1f)
-                        val iconColor = lerp(unselectedColor, selectedColor, emphasis)
-                        val label = stringResource(item.labelRes)
-
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .clip(CsqttShapes.Control)
-                                .selectable(
-                                    selected = item.id == selectedTab,
-                                    role = Role.Tab,
-                                    onClick = { onTabSelected(item.id) },
-                                ),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Box(contentAlignment = Alignment.TopEnd) {
-                                Icon(
-                                    imageVector = if (emphasis > 0.55f) item.selectedIcon else item.unselectedIcon,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(22.dp),
-                                    tint = iconColor
-                                )
-                                if (item.id == 3 && unreadErrors > 0) {
-                                    Badge(
-                                        containerColor = if (tunnelRunning) colors.primary else CSQTTColors.warning,
-                                        contentColor = colors.onPrimary,
-                                        modifier = Modifier.offset(x = 12.dp, y = (-8).dp)
-                                    ) {
-                                        Text("$unreadErrors")
-                                    }
-                                }
-                            }
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = if (emphasis > 0.55f) FontWeight.SemiBold else FontWeight.Medium,
-                                color = iconColor,
-                                maxLines = 1
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-private fun openReleaseUrl(context: Context, url: String) {
-    try {
-        val intent = Intent(Intent.ACTION_VIEW, url.toUri()).apply {
-            addCategory(Intent.CATEGORY_BROWSABLE)
-        }
-        context.startActivity(intent)
-    } catch (_: Exception) {
-        context.showRaisedToast("Не удалось открыть ссылку", Toast.LENGTH_SHORT)
-    }
-}
+                    Box {
+                        IconButton(onClick = { menuExpanded = true }) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "Меню",
+          
