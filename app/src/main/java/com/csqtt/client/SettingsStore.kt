@@ -489,7 +489,7 @@ class SettingsStore(context: Context) {
         when (prefs[getProfileKey(VK_AUTH_MODE, profile)]) {
             CsqttConstants.VkAuth.MODE_CAPTCHA -> CsqttConstants.VkAuth.MODE_CAPTCHA
             CsqttConstants.VkAuth.MODE_AUTO_JS -> CsqttConstants.VkAuth.MODE_AUTO_JS
-            else -> CsqttConstants.VkAuth.MODE_CALLS
+            else -> CsqttConstants.VkAuth.MODE_AUTO_JS
         }
     }
     val obfsMode: Flow<String> = dataStore.data.map { prefs ->
